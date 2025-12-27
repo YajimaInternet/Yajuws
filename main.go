@@ -71,7 +71,7 @@ func printBanner() {
 	fmt.Println("   ██║  ██║██║  ██║███████║    ╚███╔███╔╝██║██║ ╚████║███████╗")
 	fmt.Println("   ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝     ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚══════╝")
 	fmt.Println()
-	fmt.Println("                       やりますねぇ！Yajuws OS v3.0")
+	fmt.Println("                       やりますねぇ！Yajuws OS v4.0")
 	fmt.Println("                 王道を征く野獣+wawawa伝説システム！")
 	fmt.Println()
 }
@@ -100,7 +100,7 @@ func systemInfo(reader *bufio.Reader) {
 	fmt.Println("║                          システム情報                           ║")
 	fmt.Println("╚══════════════════════════════════════════════════════╝")
 	fmt.Println()
-	fmt.Println("OS名: Yajuws OS v3.0 (野獣先輩+wawawa伝説エディション)")
+	fmt.Println("OS名: Yajuws OS v4.0 (野獣先輩+wawawa伝説エディション)")
 	fmt.Println("バージョン: 王道を征く！(語録75+5伝説)")
 	fmt.Println("CPU: 野獣プロセッサ (24歳学生コア x 114514 + wawawaコア)")
 	fmt.Println("RAM: ファッ！？ 伝説語録無限大")
@@ -119,7 +119,7 @@ func quotes(reader *bufio.Reader) {
 		clearScreen()
 		fmt.Println()
 		fmt.Println("╔══════════════════════════════════════════════════════╗")
-		fmt.Println("║                       語録ジェネレーター v3.0                   ║")
+		fmt.Println("║                       語録ジェネレーター v4.0                   ║")
 		fmt.Println("║           野獣先輩75語録 + wawawa伝説5語 (5%確率)             ║")
 		fmt.Println("╚══════════════════════════════════════════════════════╝")
 		fmt.Println()
@@ -165,7 +165,7 @@ func diagnosis(reader *bufio.Reader) {
 func exitMessage() {
 	clearScreen()
 	fmt.Println()
-	fmt.Println("Yajuws OS v3.0を終了します。やりますねぇ！またどうぞ！")
+	fmt.Println("Yajuws OS v4.0を終了します。やりますねぇ！またどうぞ！")
 	fmt.Println("(野獣先輩75語録 + wawawa伝説5語 ありがとうございました)")
 	sleepSeconds(2)
 }
