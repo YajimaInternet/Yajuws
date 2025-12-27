@@ -3,6 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/load"
+	"github.com/shirou/gopsutil/v4/mem"
+	"github.com/shirou/gopsutil/v4/process"
 	"math/rand"
 	"os"
 	"runtime"
@@ -45,10 +49,11 @@ func main() {
 		fmt.Println("[5] 便利ツール (時計/タイマー/ミニゲーム)")
 		fmt.Println("[6] 語録履歴・お気に入り")
 		fmt.Println("[7] 設定")
-		fmt.Println("[8] やめる (終了)")
+		fmt.Println("[8] タスクマネージャー (top風)")
+		fmt.Println("[9] やめる (終了)")
 		fmt.Println()
 		fmt.Printf("稼働時間: %s\n", formatDuration(time.Since(state.start)))
-		fmt.Print("選択肢を入力 (1-8): ")
+		fmt.Print("選択肢を入力 (1-9): ")
 
 		choice, ok := readLine(reader)
 		if !ok {
@@ -73,6 +78,8 @@ func main() {
 		case "7":
 			settingsMenu(reader, state)
 		case "8":
+			taskManager(reader, state)
+		case "9":
 			exitMessage(state)
 			return
 		default:
@@ -291,6 +298,65 @@ func toolsMenu(reader *bufio.Reader, state *AppState) {
 		default:
 		}
 	}
+}
+
+func taskManager(reader *bufio.Reader, state *AppState) {
+	clearScreen()
+	fmt.Println("タスクマネージャー (Enterで戻る)")
+	stop := make(chan struct{})
+	go func() {
+		_, _ = readLine(reader)
+		close(stop)
+	}()
+
+	renderTaskManager(state)
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			renderTaskManager(state)
+		}
+	}
+}
+
+func renderTaskManager(state *AppState) {
+	cpuUsage := "N/A"
+	if percents, err := cpu.Percent(0, false); err == nil && len(percents) > 0 {
+		cpuUsage = fmt.Sprintf("%.1f%%", percents[0])
+	}
+
+	processCount := "N/A"
+	if pids, err := process.Pids(); err == nil {
+		processCount = strconv.Itoa(len(pids))
+	}
+
+	memSummary := "N/A"
+	if info, err := mem.VirtualMemory(); err == nil {
+		memSummary = fmt.Sprintf("%s / %s (%.1f%%)", formatBytes(info.Used), formatBytes(info.Total), info.UsedPercent)
+	}
+
+	loadSummary := "N/A"
+	if avg, err := load.Avg(); err == nil {
+		loadSummary = fmt.Sprintf("1m %.2f / 5m %.2f / 15m %.2f", avg.Load1, avg.Load5, avg.Load15)
+	}
+
+	clearScreen()
+	fmt.Println(applyTheme(state, "╔══════════════════════════════════════════════════════╗"))
+	fmt.Println(applyTheme(state, "║                     タスクマネージャー                     ║"))
+	fmt.Println(applyTheme(state, "╚══════════════════════════════════════════════════════╝"))
+	fmt.Println()
+	fmt.Printf("時刻: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Printf("CPU使用率: %s\n", cpuUsage)
+	fmt.Printf("プロセス数: %s\n", processCount)
+	fmt.Printf("メモリ使用量: %s\n", memSummary)
+	fmt.Printf("ロード平均: %s\n", loadSummary)
+	fmt.Printf("稼働時間: %s\n", formatDuration(time.Since(state.start)))
+	fmt.Println()
+	fmt.Println("Enterで戻る")
 }
 
 func historyMenu(reader *bufio.Reader, state *AppState) {
@@ -601,6 +667,17 @@ func formatDuration(d time.Duration) string {
 	m := (total % 3600) / 60
 	s := total % 60
 	return fmt.Sprintf("%02dh%02dm%02ds", h, m, s)
+}
+
+func formatBytes(value uint64) string {
+	units := []string{"B", "KB", "MB", "GB", "TB"}
+	size := float64(value)
+	unit := 0
+	for size >= 1024 && unit < len(units)-1 {
+		size /= 1024
+		unit++
+	}
+	return fmt.Sprintf("%.1f %s", size, units[unit])
 }
 
 func onOff(value bool) string {
