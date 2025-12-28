@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/mattn/go-runewidth"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/load"
 	"github.com/shirou/gopsutil/v4/mem"
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	appVersion = "v4.1"
+	appVersion = "v4.2"
 	maxHistory = 50
 )
 
@@ -102,9 +103,9 @@ func newAppState() *AppState {
 func showWarning() {
 	clearScreen()
 	fmt.Println("========================================================")
-	fmt.Println("  注意: これはネタ用ジョークソフトです")
+	fmt.Println("  注意: これはジョークソフトです")
 	fmt.Println("  PCに一切影響を与えません。終了で元通り。")
-	fmt.Println("  作成者: YajimaNetWorks (ネタとして)")
+	fmt.Println("  作成者: YajimaNetWorks")
 	fmt.Println("========================================================")
 	fmt.Println()
 }
@@ -170,26 +171,42 @@ func printBanner(state *AppState) {
 func fileManager(reader *bufio.Reader) {
 	clearScreen()
 	fmt.Println()
-	fmt.Println("╔══════════════════════════════════════════════════════╗")
-	fmt.Println("║                やりますねぇ！ファイルマネージャ               ║")
-	fmt.Println("║                                                          ║")
-	fmt.Println("║  C:Yajuwsyaju.exe             666MB                 ║")
-	fmt.Println("║  C:Yajuwsyajusenpai.iso        24GB                  ║")
-	fmt.Println("║  C:Yajuwsgoro.txt            359語録+5伝説 114514KB ║")
-	fmt.Println("║  C:Yajuwswawawa_legend.mp3     ∞MB                   ║")
-	fmt.Println("║                                                          ║")
-	fmt.Println("╚══════════════════════════════════════════════════════╝")
+	entries := [][2]string{
+		{"C:Yajuwsyaju.exe", "666MB"},
+		{"C:Yajuwsyajusenpai.iso", "24GB"},
+		{"C:Yajuwsgoro.txt", "359語録+5伝説 114514KB"},
+		{"C:Yajuwswawawa_legend.mp3", "∞MB"},
+	}
+
+	leftWidth := 0
+	rightWidth := 0
+	for _, entry := range entries {
+		if w := displayWidth(entry[0]); w > leftWidth {
+			leftWidth = w
+		}
+		if w := displayWidth(entry[1]); w > rightWidth {
+			rightWidth = w
+		}
+	}
+
+	lines := []string{""}
+	for _, entry := range entries {
+		line := padRightDisplay(entry[0], leftWidth) + strings.Repeat(" ", 3) + padLeftDisplay(entry[1], rightWidth)
+		lines = append(lines, line)
+	}
+	lines = append(lines, "")
+
+	box := drawBox("やりますねぇ！ファイルマネージャ", lines)
+	printBoxLines(box, nil)
 	fmt.Println()
-	fmt.Println("注: 実際のファイルは存在しません。ネタです！")
+	fmt.Println("注: 実際のファイルは存在しません。")
 	pause(reader)
 }
 
 func systemInfo(reader *bufio.Reader, state *AppState) {
 	clearScreen()
 	fmt.Println()
-	fmt.Println("╔══════════════════════════════════════════════════════╗")
-	fmt.Println("║                          システム情報                           ║")
-	fmt.Println("╚══════════════════════════════════════════════════════╝")
+	printBoxLines(drawBox("システム情報", nil), nil)
 	fmt.Println()
 	fmt.Printf("OS名: Yajuws OS %s (野獣先輩+wawawa伝説エディション)\n", appVersion)
 	fmt.Println("バージョン: 王道を征く！(語録75+5伝説)")
@@ -210,10 +227,7 @@ func quotes(reader *bufio.Reader, state *AppState) {
 	for {
 		clearScreen()
 		fmt.Println()
-		fmt.Println("╔══════════════════════════════════════════════════════╗")
-		fmt.Println("║                       語録ジェネレーター v4.1                   ║")
-		fmt.Println("║           野獣先輩75語録 + wawawa伝説5語 (5%確率)             ║")
-		fmt.Println("╚══════════════════════════════════════════════════════╝")
+		printBoxLines(drawBox("語録ジェネレーター v4.1", []string{"野獣先輩75語録 + wawawa伝説5語 (5%確率)"}), nil)
 		fmt.Println()
 
 		var quote string
@@ -243,9 +257,7 @@ func quotes(reader *bufio.Reader, state *AppState) {
 func diagnosis(reader *bufio.Reader, state *AppState) {
 	clearScreen()
 	fmt.Println()
-	fmt.Println("╔══════════════════════════════════════════════════════╗")
-	fmt.Println("║                         エラー診断ツール                        ║")
-	fmt.Println("╚══════════════════════════════════════════════════════╝")
+	printBoxLines(drawBox("エラー診断ツール", nil), nil)
 	fmt.Println()
 	fmt.Println("診断中... (359語録+5伝説スキャン)")
 	sleepSeconds(2)
@@ -268,9 +280,7 @@ func toolsMenu(reader *bufio.Reader, state *AppState) {
 	for {
 		clearScreen()
 		fmt.Println()
-		fmt.Println("╔══════════════════════════════════════════════════════╗")
-		fmt.Println("║                         便利ツール                         ║")
-		fmt.Println("╚══════════════════════════════════════════════════════╝")
+		printBoxLines(drawBox("便利ツール", nil), nil)
 		fmt.Println()
 		fmt.Println("[1] リアルタイム時計")
 		fmt.Println("[2] カウントダウンタイマー")
@@ -345,9 +355,9 @@ func renderTaskManager(state *AppState) {
 	}
 
 	clearScreen()
-	fmt.Println(applyTheme(state, "╔══════════════════════════════════════════════════════╗"))
-	fmt.Println(applyTheme(state, "║                     タスクマネージャー                     ║"))
-	fmt.Println(applyTheme(state, "╚══════════════════════════════════════════════════════╝"))
+	printBoxLines(drawBox("タスクマネージャー", nil), func(line string) string {
+		return applyTheme(state, line)
+	})
 	fmt.Println()
 	fmt.Printf("時刻: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	fmt.Printf("CPU使用率: %s\n", cpuUsage)
@@ -363,9 +373,7 @@ func historyMenu(reader *bufio.Reader, state *AppState) {
 	for {
 		clearScreen()
 		fmt.Println()
-		fmt.Println("╔══════════════════════════════════════════════════════╗")
-		fmt.Println("║                   語録履歴・お気に入り                    ║")
-		fmt.Println("╚══════════════════════════════════════════════════════╝")
+		printBoxLines(drawBox("語録履歴・お気に入り", nil), nil)
 		fmt.Println()
 
 		if len(state.history) == 0 {
@@ -433,9 +441,7 @@ func historyMenu(reader *bufio.Reader, state *AppState) {
 func showFavorites(reader *bufio.Reader, state *AppState) {
 	clearScreen()
 	fmt.Println()
-	fmt.Println("╔══════════════════════════════════════════════════════╗")
-	fmt.Println("║                        お気に入り                        ║")
-	fmt.Println("╚══════════════════════════════════════════════════════╝")
+	printBoxLines(drawBox("お気に入り", nil), nil)
 	fmt.Println()
 
 	if len(state.favorites) == 0 {
@@ -455,9 +461,7 @@ func settingsMenu(reader *bufio.Reader, state *AppState) {
 	for {
 		clearScreen()
 		fmt.Println()
-		fmt.Println("╔══════════════════════════════════════════════════════╗")
-		fmt.Println("║                          設定                          ║")
-		fmt.Println("╚══════════════════════════════════════════════════════╝")
+		printBoxLines(drawBox("設定", nil), nil)
 		fmt.Println()
 		fmt.Printf("高速起動: %s\n", onOff(state.fastBoot))
 		fmt.Printf("カラー表示: %s\n", onOff(state.useColor))
@@ -699,6 +703,66 @@ func applyTheme(state *AppState, text string) string {
 	default:
 		return "\x1b[33m" + text + "\x1b[0m"
 	}
+}
+
+func drawBox(title string, lines []string) []string {
+	width := displayWidth(title)
+	for _, line := range lines {
+		if w := displayWidth(line); w > width {
+			width = w
+		}
+	}
+	if width < 1 {
+		width = 1
+	}
+	top := "╔" + strings.Repeat("═", width+2) + "╗"
+	bottom := "╚" + strings.Repeat("═", width+2) + "╝"
+	out := []string{top, "║ " + padCenterDisplay(title, width) + " ║"}
+	for _, line := range lines {
+		out = append(out, "║ "+padRightDisplay(line, width)+" ║")
+	}
+	out = append(out, bottom)
+	return out
+}
+
+func printBoxLines(lines []string, decorate func(string) string) {
+	for _, line := range lines {
+		if decorate != nil {
+			fmt.Println(decorate(line))
+		} else {
+			fmt.Println(line)
+		}
+	}
+}
+
+func displayWidth(text string) int {
+	return runewidth.StringWidth(text)
+}
+
+func padRightDisplay(text string, width int) string {
+	padding := width - displayWidth(text)
+	if padding <= 0 {
+		return text
+	}
+	return text + strings.Repeat(" ", padding)
+}
+
+func padCenterDisplay(text string, width int) string {
+	padding := width - displayWidth(text)
+	if padding <= 0 {
+		return text
+	}
+	left := padding / 2
+	right := padding - left
+	return strings.Repeat(" ", left) + text + strings.Repeat(" ", right)
+}
+
+func padLeftDisplay(text string, width int) string {
+	padding := width - displayWidth(text)
+	if padding <= 0 {
+		return text
+	}
+	return strings.Repeat(" ", padding) + text
 }
 
 func addHistory(state *AppState, quote string) {
