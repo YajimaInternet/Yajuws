@@ -1,2 +1,4 @@
 builds
 *.exe
+.gocache
+*.log

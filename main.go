@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	appVersion = "v4.3"
+	appVersion = "v4.4"
 	maxHistory = 50
 	notesFile  = "yajuws_notes.txt"
 )
@@ -293,9 +293,11 @@ func toolsMenu(reader *bufio.Reader, state *AppState) {
 		fmt.Println("[2] カウントダウンタイマー")
 		fmt.Println("[3] 稼働時間チェッカー")
 		fmt.Println("[4] じゃんけんミニゲーム")
-		fmt.Println("[5] 戻る")
+		fmt.Println("[5] 電卓")
+		fmt.Println("[6] カレンダー")
+		fmt.Println("[7] 戻る")
 		fmt.Println()
-		fmt.Print("選択肢を入力 (1-5): ")
+		fmt.Print("選択肢を入力 (1-7): ")
 
 		choice, ok := readLine(reader)
 		if !ok {
@@ -311,6 +313,10 @@ func toolsMenu(reader *bufio.Reader, state *AppState) {
 		case "4":
 			rockPaperScissors(reader)
 		case "5":
+			calculator(reader)
+		case "6":
+			showCalendar(reader)
+		case "7":
 			return
 		default:
 		}
@@ -603,6 +609,105 @@ func rockPaperScissors(reader *bufio.Reader) {
 	case 2:
 		fmt.Println("負け…ファッ！？")
 	}
+	pause(reader)
+}
+
+func calculator(reader *bufio.Reader) {
+	clearScreen()
+	fmt.Println("電卓")
+	fmt.Print("1つ目の数値: ")
+	leftInput, ok := readLine(reader)
+	if !ok {
+		return
+	}
+
+	left, err := strconv.ParseFloat(strings.TrimSpace(leftInput), 64)
+	if err != nil {
+		fmt.Println("数値が不正です。")
+		sleepSeconds(1)
+		return
+	}
+
+	fmt.Print("演算子 (+ - * /): ")
+	op, ok := readLine(reader)
+	if !ok {
+		return
+	}
+
+	fmt.Print("2つ目の数値: ")
+	rightInput, ok := readLine(reader)
+	if !ok {
+		return
+	}
+
+	right, err := strconv.ParseFloat(strings.TrimSpace(rightInput), 64)
+	if err != nil {
+		fmt.Println("数値が不正です。")
+		sleepSeconds(1)
+		return
+	}
+
+	operator := strings.TrimSpace(op)
+	var result float64
+	switch operator {
+	case "+":
+		result = left + right
+	case "-":
+		result = left - right
+	case "*":
+		result = left * right
+	case "/":
+		if right == 0 {
+			fmt.Println("0では割れません。")
+			sleepSeconds(1)
+			return
+		}
+		result = left / right
+	default:
+		fmt.Println("演算子が不正です。")
+		sleepSeconds(1)
+		return
+	}
+
+	fmt.Println()
+	fmt.Printf("%.4f %s %.4f = %.4f\n", left, operator, right, result)
+	fmt.Println()
+	pause(reader)
+}
+
+func showCalendar(reader *bufio.Reader) {
+	clearScreen()
+	now := time.Now()
+	firstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	lastDay := firstDay.AddDate(0, 1, -1)
+
+	fmt.Println()
+	printBoxLines(drawBox("カレンダー", []string{
+		now.Format("2006年01月"),
+	}), nil)
+	fmt.Println()
+	fmt.Println("日 月 火 水 木 金 土")
+
+	offset := int(firstDay.Weekday())
+	cells := make([]string, 0, offset+lastDay.Day())
+	for i := 0; i < offset; i++ {
+		cells = append(cells, "  ")
+	}
+	for day := 1; day <= lastDay.Day(); day++ {
+		cells = append(cells, fmt.Sprintf("%2d", day))
+	}
+
+	for i := 0; i < len(cells); i += 7 {
+		end := i + 7
+		if end > len(cells) {
+			end = len(cells)
+		}
+		fmt.Println(strings.Join(cells[i:end], " "))
+	}
+
+	fmt.Println()
+	fmt.Printf("今日は %d日 (%s)\n", now.Day(), weekdayName(now.Weekday()))
+	fmt.Println()
 	pause(reader)
 }
 
@@ -982,6 +1087,27 @@ func saveNotes(notes []string) error {
 		content = strings.Join(notes, "\n") + "\n"
 	}
 	return os.WriteFile(notesFile, []byte(content), 0644)
+}
+
+func weekdayName(day time.Weekday) string {
+	switch day {
+	case time.Sunday:
+		return "日"
+	case time.Monday:
+		return "月"
+	case time.Tuesday:
+		return "火"
+	case time.Wednesday:
+		return "水"
+	case time.Thursday:
+		return "木"
+	case time.Friday:
+		return "金"
+	case time.Saturday:
+		return "土"
+	default:
+		return "?"
+	}
 }
 
 func randomWawawa() string {
