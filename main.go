@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	appVersion = "v4.4"
+	appVersion = "v4.5"
 	maxHistory = 50
 	notesFile  = "yajuws_notes.txt"
 )
@@ -39,8 +39,7 @@ func main() {
 	state := newAppState()
 
 	showWarning()
-	sleepSeconds(2)
-	bootSequence(reader, state)
+	bootSequence(state)
 
 	for {
 		clearScreen()
@@ -117,21 +116,15 @@ func showWarning() {
 	fmt.Println()
 }
 
-func bootSequence(reader *bufio.Reader, state *AppState) {
+func bootSequence(state *AppState) {
 	if state.fastBoot {
 		return
 	}
 
 	clearScreen()
 	fmt.Printf("Yajuws OS %s 起動シーケンス\n", appVersion)
-	fmt.Println("Enterでスキップできます")
+	fmt.Println("高速起動は設定から切り替えできます")
 	fmt.Println()
-
-	skip := make(chan struct{})
-	go func() {
-		_, _ = readLine(reader)
-		close(skip)
-	}()
 
 	steps := []string{
 		"BIOSチェック中...OK",
@@ -142,18 +135,13 @@ func bootSequence(reader *bufio.Reader, state *AppState) {
 	}
 
 	for _, step := range steps {
-		select {
-		case <-skip:
-			return
-		default:
-		}
 		fmt.Println(step)
-		sleepSeconds(1)
+		sleepMillis(120)
 	}
 
 	fmt.Println()
 	fmt.Println("起動完了。やりますねぇ！")
-	sleepSeconds(1)
+	sleepMillis(150)
 }
 
 func printBanner(state *AppState) {
@@ -936,6 +924,10 @@ func pause(reader *bufio.Reader) {
 
 func sleepSeconds(sec int) {
 	time.Sleep(time.Duration(sec) * time.Second)
+}
+
+func sleepMillis(ms int) {
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 }
 
 func clearScreen() {
