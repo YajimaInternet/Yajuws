@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	appVersion = "v4.2"
+	appVersion = "v4.3"
 	maxHistory = 50
+	notesFile  = "yajuws_notes.txt"
 )
 
 type AppState struct {
@@ -27,6 +28,7 @@ type AppState struct {
 	useColor  bool
 	theme     string
 	history   []string
+	notes     []string
 	favorites map[string]bool
 	lastQuote string
 }
@@ -51,10 +53,12 @@ func main() {
 		fmt.Println("[6] 語録履歴・お気に入り")
 		fmt.Println("[7] 設定")
 		fmt.Println("[8] タスクマネージャー (top風)")
-		fmt.Println("[9] やめる (終了)")
+		fmt.Println("[9] メモ帳")
+		fmt.Println("[0] やめる (終了)")
 		fmt.Println()
 		fmt.Printf("稼働時間: %s\n", formatDuration(time.Since(state.start)))
-		fmt.Print("選択肢を入力 (1-9): ")
+		fmt.Printf("保存メモ数: %d\n", len(state.notes))
+		fmt.Print("選択肢を入力 (0-9): ")
 
 		choice, ok := readLine(reader)
 		if !ok {
@@ -81,6 +85,8 @@ func main() {
 		case "8":
 			taskManager(reader, state)
 		case "9":
+			notesMenu(reader, state)
+		case "0":
 			exitMessage(state)
 			return
 		default:
@@ -92,10 +98,11 @@ func main() {
 func newAppState() *AppState {
 	return &AppState{
 		start:     time.Now(),
-		fastBoot: false,
-		useColor: true,
-		theme:    "amber",
-		history:  []string{},
+		fastBoot:  false,
+		useColor:  true,
+		theme:     "amber",
+		history:   []string{},
+		notes:     loadNotes(),
 		favorites: map[string]bool{},
 	}
 }
@@ -599,6 +606,171 @@ func rockPaperScissors(reader *bufio.Reader) {
 	pause(reader)
 }
 
+func notesMenu(reader *bufio.Reader, state *AppState) {
+	for {
+		clearScreen()
+		fmt.Println()
+		printBoxLines(drawBox("メモ帳", []string{
+			fmt.Sprintf("保存先: %s", notesFile),
+			fmt.Sprintf("メモ数: %d", len(state.notes)),
+		}), nil)
+		fmt.Println()
+
+		if len(state.notes) == 0 {
+			fmt.Println("まだメモがありません。")
+		} else {
+			fmt.Println("最近のメモ (最新5件):")
+			start := len(state.notes) - 5
+			if start < 0 {
+				start = 0
+			}
+			for i := len(state.notes) - 1; i >= start; i-- {
+				fmt.Printf("%d) %s\n", i+1, state.notes[i])
+			}
+		}
+
+		fmt.Println()
+		fmt.Println("[1] メモ追加")
+		fmt.Println("[2] 全件表示")
+		fmt.Println("[3] メモ削除")
+		fmt.Println("[4] 全消去")
+		fmt.Println("[5] 戻る")
+		fmt.Println()
+		fmt.Print("選択肢を入力 (1-5): ")
+
+		choice, ok := readLine(reader)
+		if !ok {
+			return
+		}
+		switch strings.TrimSpace(choice) {
+		case "1":
+			addNote(reader, state)
+		case "2":
+			showAllNotes(reader, state)
+		case "3":
+			deleteNote(reader, state)
+		case "4":
+			clearNotes(reader, state)
+		case "5":
+			return
+		default:
+		}
+	}
+}
+
+func addNote(reader *bufio.Reader, state *AppState) {
+	clearScreen()
+	fmt.Println("メモ追加")
+	fmt.Print("内容を入力: ")
+	input, ok := readLine(reader)
+	if !ok {
+		return
+	}
+
+	note := strings.TrimSpace(input)
+	if note == "" {
+		fmt.Println("空メモは保存できません。")
+		sleepSeconds(1)
+		return
+	}
+
+	state.notes = append(state.notes, note)
+	if err := saveNotes(state.notes); err != nil {
+		fmt.Printf("保存失敗: %v\n", err)
+		sleepSeconds(2)
+		return
+	}
+
+	fmt.Println("保存しました。")
+	sleepSeconds(1)
+}
+
+func showAllNotes(reader *bufio.Reader, state *AppState) {
+	clearScreen()
+	fmt.Println()
+	printBoxLines(drawBox("保存済みメモ", nil), nil)
+	fmt.Println()
+
+	if len(state.notes) == 0 {
+		fmt.Println("保存済みメモはありません。")
+	} else {
+		for i, note := range state.notes {
+			fmt.Printf("%d) %s\n", i+1, note)
+		}
+	}
+
+	fmt.Println()
+	pause(reader)
+}
+
+func deleteNote(reader *bufio.Reader, state *AppState) {
+	clearScreen()
+	fmt.Println("メモ削除")
+	if len(state.notes) == 0 {
+		fmt.Println("削除できるメモがありません。")
+		sleepSeconds(1)
+		return
+	}
+
+	for i, note := range state.notes {
+		fmt.Printf("%d) %s\n", i+1, note)
+	}
+	fmt.Println()
+	fmt.Print("削除する番号を入力: ")
+	input, ok := readLine(reader)
+	if !ok {
+		return
+	}
+
+	index, err := strconv.Atoi(strings.TrimSpace(input))
+	if err != nil || index <= 0 || index > len(state.notes) {
+		fmt.Println("番号が不正です。")
+		sleepSeconds(1)
+		return
+	}
+
+	state.notes = append(state.notes[:index-1], state.notes[index:]...)
+	if err := saveNotes(state.notes); err != nil {
+		fmt.Printf("保存失敗: %v\n", err)
+		sleepSeconds(2)
+		return
+	}
+
+	fmt.Println("削除しました。")
+	sleepSeconds(1)
+}
+
+func clearNotes(reader *bufio.Reader, state *AppState) {
+	clearScreen()
+	fmt.Println("メモ全消去")
+	if len(state.notes) == 0 {
+		fmt.Println("消すメモがありません。")
+		sleepSeconds(1)
+		return
+	}
+
+	fmt.Print("本当に全部消すなら YES と入力: ")
+	input, ok := readLine(reader)
+	if !ok {
+		return
+	}
+	if strings.TrimSpace(input) != "YES" {
+		fmt.Println("キャンセルしました。")
+		sleepSeconds(1)
+		return
+	}
+
+	state.notes = []string{}
+	if err := saveNotes(state.notes); err != nil {
+		fmt.Printf("保存失敗: %v\n", err)
+		sleepSeconds(2)
+		return
+	}
+
+	fmt.Println("全消去しました。")
+	sleepSeconds(1)
+}
+
 func parseHand(choice string) (int, bool) {
 	switch choice {
 	case "1":
@@ -784,6 +956,32 @@ func toggleFavorite(state *AppState, quote string) {
 	} else {
 		state.favorites[quote] = true
 	}
+}
+
+func loadNotes() []string {
+	data, err := os.ReadFile(notesFile)
+	if err != nil {
+		return []string{}
+	}
+
+	text := strings.ReplaceAll(string(data), "\r\n", "\n")
+	lines := strings.Split(text, "\n")
+	notes := make([]string, 0, len(lines))
+	for _, line := range lines {
+		note := strings.TrimSpace(line)
+		if note != "" {
+			notes = append(notes, note)
+		}
+	}
+	return notes
+}
+
+func saveNotes(notes []string) error {
+	content := ""
+	if len(notes) > 0 {
+		content = strings.Join(notes, "\n") + "\n"
+	}
+	return os.WriteFile(notesFile, []byte(content), 0644)
 }
 
 func randomWawawa() string {
